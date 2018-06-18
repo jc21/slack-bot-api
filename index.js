@@ -30,7 +30,7 @@ class Bot extends EventEmitter {
      * Starts a Real Time Messaging API session
      */
      login() {
-         this._api('rtm.start').then((data) => {
+         this._api('rtm.start').then(data => {
              this.wsUrl = data.url;
              this.self = data.self;
              this.team = data.team;
@@ -42,9 +42,9 @@ class Bot extends EventEmitter {
              this.emit('start');
 
              this.connect();
-         }).fail((data) => {
+         }).catch(data => {
              this.emit('error', new Error(data.error ? data.error : data));
-         }).done();
+         });
     }
 
     /**
@@ -461,7 +461,7 @@ class Bot extends EventEmitter {
      * Send request to API method
      * @param {string} methodName
      * @param {object} params
-     * @returns {vow.Promise}
+     * @returns {Promise}
      * @private
      */
     _api(methodName, params) {
@@ -471,7 +471,7 @@ class Bot extends EventEmitter {
             form: this._preprocessParams(params)
         };
 
-        return new Vow.Promise(function(resolve, reject) {
+        return new Promise(function(resolve, reject) {
 
             request.post(data, function(err, request, body) {
                 if (err) {
