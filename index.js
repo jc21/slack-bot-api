@@ -6,6 +6,8 @@ var Vow = require('vow');
 var extend = require('extend');
 var WebSocket = require('ws');
 var EventEmitter = require('events').EventEmitter;
+var HttpsProxyAgent = require('https-proxy-agent');
+var Url = require('url');
 
 class Bot extends EventEmitter {
     /**
@@ -19,6 +21,8 @@ class Bot extends EventEmitter {
          this.name = params.name;
 
          console.assert(params.token, 'token must be defined');
+
+         this._configureProxy(params.proxy || undefined);
          this.login();
      }
 
@@ -47,7 +51,7 @@ class Bot extends EventEmitter {
      * Establish a WebSocket connection
      */
      connect() {
-         this.ws = new WebSocket(this.wsUrl);
+         this.ws = new WebSocket(this.wsUrl, {agent: this._agent});
 
          this.ws.on('open', function(data) {
              this.emit('open', data);
@@ -492,6 +496,34 @@ class Bot extends EventEmitter {
                 }
             });
         });
+    }
+
+    /**
+     * Use a HTTP Proxy is supplied in the params of the custructor, otherwise look at the environment vars
+     * for proxy configuration. We need to accomodate both uppercase and lowercase environment definitions.
+     *
+     * @param {string} proxy
+     * @private
+     */
+    _configureProxy(proxy) {
+        if (!proxy && ((typeof process.env['http_proxy'] !== 'undefined' && process.env['http_proxy']) || (typeof process.env['HTTP_PROXY'] !== 'undefined' && process.env['HTTP_PROXY']))) {
+            proxy = process.env['http_proxy'] || process.env['HTTP_PROXY'];
+        }
+
+        this._agent = null;
+        if (proxy) {
+            try {
+                // Url.parse can throw it's own errors but strangely doesn't throw when the url is not really valid.
+                var proxyUrl = Url.parse(process.env['http_proxy'] || process.env['HTTP_PROXY']);
+                if (!proxyUrl.hostname) {
+                    throw new Error('Invalid HTTP_PROXY environment variable value');
+                }
+
+                this._agent = new HttpsProxyAgent(proxyUrl);
+            } catch (e) {
+                console.error(e);
+            }
+        }
     }
 }
 
